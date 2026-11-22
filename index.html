@@ -1,0 +1,1707 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BUBUR AYAM POS — Elite Premium Edition</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #F8F7F4;
+      color: #30251F;
+    }
+    h1, h2, h3, .font-display {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    @media print {
+      body * { visibility: hidden; }
+      #area-cetak-struk, #area-cetak-struk * { visibility: visible; }
+      #area-cetak-struk {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 100%;
+        box-shadow: none !important;
+        border: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    // Komponen Ikon Lucide Ringan
+    const Icon = ({ name, size = 18, className = "" }) => {
+      const ref = React.useRef(null);
+      useEffect(() => {
+        if (ref.current && window.lucide) {
+          ref.current.innerHTML = '';
+          const iconEl = document.createElement('i');
+          iconEl.setAttribute('data-lucide', name);
+          iconEl.style.width = `${size}px`;
+          iconEl.style.height = `${size}px`;
+          if (className) iconEl.setAttribute('class', className);
+          ref.current.appendChild(iconEl);
+          window.lucide.createIcons({ nodes: [iconEl] });
+        }
+      }, [name, size, className]);
+      return <span ref={ref} className="inline-flex items-center justify-center shrink-0" />;
+    };
+
+    const formatRupiah = (angka) => {
+      return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(angka || 0);
+    };
+
+    const DATA_AWAL = {
+      profilUsaha: {
+        nama: 'Bubur Ayam Spesial Nusantara',
+        alamat: 'Jl. Kartini No. 45, Kejaksan, Kota Cirebon',
+        telepon: '0812-3456-7890',
+        catatanStruk: 'Terima kasih atas kunjungan Anda! Selamat menikmati.',
+      },
+      produk: [
+        { id: 'PRD-01', kode: 'BBR-01', nama: 'Bubur Ayam Original', kategori: 'Menu Utama', harga: 13000, aktif: true, ikon: '🥣' },
+        { id: 'PRD-02', kode: 'TOP-01', nama: 'Sate Ampela', kategori: 'Topping & Sate', harga: 2000, aktif: true, ikon: '🍢' },
+        { id: 'PRD-03', kode: 'TOP-02', nama: 'Sate Ati', kategori: 'Topping & Sate', harga: 2000, aktif: true, ikon: '🍢' },
+        { id: 'PRD-04', kode: 'TOP-03', nama: 'Sate Usus', kategori: 'Topping & Sate', harga: 2000, aktif: true, ikon: '🍢' },
+        { id: 'PRD-05', kode: 'TOP-04', nama: 'Telur Puyuh', kategori: 'Topping & Sate', harga: 2000, aktif: true, ikon: '🥚' },
+        { id: 'PRD-06', kode: 'MIN-01', nama: 'Es Teh Manis', kategori: 'Minuman', harga: 4000, aktif: true, ikon: '🧊' },
+        { id: 'PRD-07', kode: 'MIN-02', nama: 'Teh Tawar Hangat', kategori: 'Minuman', harga: 2000, aktif: true, ikon: '🍵' },
+      ],
+      bahanBaku: [
+        { id: 'BHN-01', nama: 'Beras Pulen', kategori: 'Bahan Pokok', stok: 25000, satuan: 'gram', minimum: 5000, hargaBeli: 15000, jumlahBeli: 1000, satuanBeli: 'kg' },
+        { id: 'BHN-02', nama: 'Daging Ayam Fillet', kategori: 'Protein', stok: 8500, satuan: 'gram', minimum: 2000, hargaBeli: 38000, jumlahBeli: 1000, satuanBeli: 'kg' },
+        { id: 'BHN-03', nama: 'Ampela Ayam', kategori: 'Protein', stok: 45, satuan: 'tusuk', minimum: 15, hargaBeli: 1000, jumlahBeli: 1, satuanBeli: 'tusuk' },
+        { id: 'BHN-04', nama: 'Ati Ayam', kategori: 'Protein', stok: 40, satuan: 'tusuk', minimum: 15, hargaBeli: 1000, jumlahBeli: 1, satuanBeli: 'tusuk' },
+        { id: 'BHN-05', nama: 'Usus Ayam', kategori: 'Protein', stok: 12, satuan: 'tusuk', minimum: 15, hargaBeli: 900, jumlahBeli: 1, satuanBeli: 'tusuk' },
+        { id: 'BHN-06', nama: 'Telur Puyuh', kategori: 'Protein', stok: 60, satuan: 'butir', minimum: 20, hargaBeli: 450, jumlahBeli: 1, satuanBeli: 'butir' },
+        { id: 'BHN-07', nama: 'Kerupuk & Kacang Kedelai', kategori: 'Pelengkap', stok: 4200, satuan: 'gram', minimum: 1000, hargaBeli: 22000, jumlahBeli: 1000, satuanBeli: 'kg' },
+        { id: 'BHN-08', nama: 'Minyak Goreng & Bumbu Kuning', kategori: 'Bumbu', stok: 3500, satuan: 'ml', minimum: 1000, hargaBeli: 18000, jumlahBeli: 1000, satuanBeli: 'liter' },
+      ],
+      resep: {
+        'PRD-01': [
+          { bahanId: 'BHN-01', jumlah: 100 },
+          { bahanId: 'BHN-02', jumlah: 45 },
+          { bahanId: 'BHN-07', jumlah: 25 },
+          { bahanId: 'BHN-08', jumlah: 15 },
+        ],
+        'PRD-02': [{ bahanId: 'BHN-03', jumlah: 1 }],
+        'PRD-03': [{ bahanId: 'BHN-04', jumlah: 1 }],
+        'PRD-04': [{ bahanId: 'BHN-05', jumlah: 1 }],
+        'PRD-05': [{ bahanId: 'BHN-06', jumlah: 2 }],
+      },
+      transaksi: [
+        {
+          id: 'TRX-20261120-001',
+          waktu: '20 Nov 2026, 07:15',
+          tanggal: '2026-11-20',
+          items: [
+            { id: 'PRD-01', nama: 'Bubur Ayam Original', qty: 2, harga: 13000, hpp: 4030 },
+            { id: 'PRD-02', nama: 'Sate Ampela', qty: 2, harga: 2000, hpp: 1000 },
+          ],
+          total: 30000,
+          totalHpp: 10060,
+          metode: 'Tunai',
+          dibayar: 50000,
+          kembalian: 20000,
+          status: 'Selesai',
+          catatan: '',
+        },
+        {
+          id: 'TRX-20261120-002',
+          waktu: '20 Nov 2026, 08:02',
+          tanggal: '2026-11-20',
+          items: [
+            { id: 'PRD-01', nama: 'Bubur Ayam Original', qty: 3, harga: 13000, hpp: 4030 },
+            { id: 'PRD-04', nama: 'Sate Usus', qty: 2, harga: 2000, hpp: 900 },
+            { id: 'PRD-05', nama: 'Telur Puyuh', qty: 2, harga: 2000, hpp: 900 },
+          ],
+          total: 47000,
+          totalHpp: 15690,
+          metode: 'QRIS',
+          dibayar: 47000,
+          kembalian: 0,
+          status: 'Selesai',
+          catatan: '',
+        },
+      ],
+      pengeluaran: [
+        { id: 'EXP-01', tanggal: '2026-11-20', kategori: 'Gas', keterangan: 'Isi ulang Tabung Gas LPG 12 kg', jumlah: 215000, metode: 'Tunai' },
+        { id: 'EXP-02', tanggal: '2026-11-19', kategori: 'Listrik', keterangan: 'Token Listrik Warung', jumlah: 150000, metode: 'Transfer' },
+        { id: 'EXP-03', tanggal: '2026-11-18', kategori: 'Gaji pegawai', keterangan: 'Uang harian 2 karyawan dapur & kasir', jumlah: 300000, metode: 'Tunai' },
+      ],
+      riwayatStok: [
+        { id: 'LOG-01', waktu: '20 Nov 2026, 06:00', bahan: 'Beras Pulen', tipe: 'Stok Masuk', perubahan: '+10.000 gram', keterangan: 'Belanja pasar pagi' },
+        { id: 'LOG-02', waktu: '20 Nov 2026, 08:02', bahan: 'Daging Ayam Fillet', tipe: 'Penjualan POS', perubahan: '-135 gram', keterangan: 'Transaksi TRX-20261120-002' },
+      ],
+    };
+
+    function App() {
+      const [data, setData] = useState(() => {
+        try {
+          const tersimpan = localStorage.getItem('bubur_ayam_pos_v1');
+          return tersimpan ? JSON.parse(tersimpan) : DATA_AWAL;
+        } catch {
+          return DATA_AWAL;
+        }
+      });
+
+      const [menuAktif, setMenuAktif] = useState('ringkasan');
+      const [sidebarCiut, setSidebarCiut] = useState(false);
+      const [sidebarMobile, setSidebarMobile] = useState(false);
+      const [pencarianGlobal, setPencarianGlobal] = useState('');
+      const [notifikasiToast, setNotifikasiToast] = useState(null);
+
+      // State Kasir
+      const [keranjang, setKeranjang] = useState([]);
+      const [cariProdukKasir, setCariProdukKasir] = useState('');
+      const [kategoriKasir, setKategoriKasir] = useState('Semua');
+      const [metodeBayar, setMetodeBayar] = useState('Tunai');
+      const [uangDiterima, setUangDiterima] = useState('');
+      const [strukAktif, setStrukAktif] = useState(null);
+      const [lebarStruk, setLebarStruk] = useState('58mm');
+
+      // State Filter & Modal
+      const [periodeDashboard, setPeriodeDashboard] = useState('Hari ini');
+      const [filterRiwayat, setFilterRiwayat] = useState('');
+      const [modalBatal, setModalBatal] = useState(null);
+      const [alasanBatal, setAlasanBatal] = useState('');
+
+      // State Form Produk, Stok, Resep, Pengeluaran
+      const [modalProduk, setModalProduk] = useState(null);
+      const [modalStok, setModalStok] = useState(null);
+      const [produkResepDipilih, setProdukResepDipilih] = useState('PRD-01');
+      const [formPengeluaran, setFormPengeluaran] = useState({
+        tanggal: '2026-11-20',
+        kategori: 'Gas',
+        keterangan: '',
+        jumlah: '',
+        metode: 'Tunai',
+      });
+
+      useEffect(() => {
+        try {
+          localStorage.setItem('bubur_ayam_pos_v1', JSON.stringify(data));
+        } catch (e) {}
+      }, [data]);
+
+      const tampilkanPesan = (teks, tipe = 'sukses') => {
+        setNotifikasiToast({ teks, tipe });
+        setTimeout(() => setNotifikasiToast(null), 3500);
+      };
+
+      const resetDataDemo = () => {
+        setData(DATA_AWAL);
+        setKeranjang([]);
+        localStorage.removeItem('bubur_ayam_pos_v1');
+        tampilkanPesan('Data demo berhasil dikembalikan ke pengaturan awal.');
+      };
+
+      // Hitung HPP Produk secara akurat
+      const hitungHppProduk = (produkId) => {
+        const daftarBahan = data.resep[produkId] || [];
+        return daftarBahan.reduce((total, item) => {
+          const bahan = data.bahanBaku.find((b) => b.id === item.bahanId);
+          if (!bahan) return total;
+          const hargaPerUnit = bahan.hargaBeli / bahan.jumlahBeli;
+          return total + hargaPerUnit * item.jumlah;
+        }, 0);
+      };
+
+      // Hitung estimasi porsi tersedia berdasarkan stok bahan baku
+      const cekKetersediaanPorsi = (produkId) => {
+        const daftarBahan = data.resep[produkId];
+        if (!daftarBahan || daftarBahan.length === 0) return 999;
+        let maksPorsi = Infinity;
+        daftarBahan.forEach((item) => {
+          const bahan = data.bahanBaku.find((b) => b.id === item.bahanId);
+          if (!bahan) {
+            maksPorsi = 0;
+          } else {
+            const porsiBisa = Math.floor(bahan.stok / item.jumlah);
+            if (porsiBisa < maksPorsi) maksPorsi = porsiBisa;
+          }
+        });
+        return maksPorsi === Infinity ? 999 : maksPorsi;
+      };
+
+      // Kalkulasi Ringkasan Keuangan
+      const ringkasanKeuangan = useMemo(() => {
+        const trxSelesai = data.transaksi.filter((t) => t.status === 'Selesai');
+        const totalOmzet = trxSelesai.reduce((s, t) => s + t.total, 0);
+        const totalHpp = trxSelesai.reduce((s, t) => s + (t.totalHpp || 0), 0);
+        const labaKotor = totalOmzet - totalHpp;
+        const totalBiayaOperasional = data.pengeluaran.reduce((s, p) => s + Number(p.jumlah || 0), 0);
+        const labaBersih = labaKotor - totalBiayaOperasional;
+        const jumlahTransaksi = trxSelesai.length;
+        const jumlahPorsi = trxSelesai.reduce(
+          (s, t) => s + t.items.reduce((acc, i) => acc + i.qty, 0),
+          0
+        );
+        const rataRataTransaksi = jumlahTransaksi > 0 ? totalOmzet / jumlahTransaksi : 0;
+        const marginKeuntungan = totalOmzet > 0 ? ((labaBersih / totalOmzet) * 100).toFixed(1) : 0;
+
+        return {
+          totalOmzet,
+          totalHpp,
+          labaKotor,
+          totalBiayaOperasional,
+          labaBersih,
+          jumlahTransaksi,
+          jumlahPorsi,
+          rataRataTransaksi,
+          marginKeuntungan,
+        };
+      }, [data.transaksi, data.pengeluaran]);
+
+      // Fungsi Kasir
+      const tambahKeKeranjang = (produk) => {
+        if (!produk.aktif) return;
+        const stokTersedia = cekKetersediaanPorsi(produk.id);
+        const diKeranjang = keranjang.find((k) => k.id === produk.id)?.qty || 0;
+        if (diKeranjang + 1 > stokTersedia) {
+          tampilkanPesan(`Stok bahan baku untuk ${produk.nama} tidak mencukupi!`, 'gagal');
+          return;
+        }
+        setKeranjang((prev) => {
+          const ada = prev.find((item) => item.id === produk.id);
+          if (ada) {
+            return prev.map((item) =>
+              item.id === produk.id ? { ...item, qty: item.qty + 1 } : item
+            );
+          }
+          return [...prev, { ...produk, qty: 1 }];
+        });
+      };
+
+      const ubahQtyKeranjang = (id, delta) => {
+        setKeranjang((prev) =>
+          prev
+            .map((item) => {
+              if (item.id !== id) return item;
+              const qtyBaru = item.qty + delta;
+              if (delta > 0 && qtyBaru > cekKetersediaanPorsi(id)) {
+                tampilkanPesan('Batas stok bahan baku tercapai.', 'gagal');
+                return item;
+              }
+              return { ...item, qty: qtyBaru };
+            })
+            .filter((item) => item.qty > 0)
+        );
+      };
+
+      const totalKeranjang = keranjang.reduce((sum, i) => sum + i.harga * i.qty, 0);
+      const nominalDibayar =
+        metodeBayar === 'Tunai' ? Number(uangDiterima || 0) : totalKeranjang;
+      const kembalian = metodeBayar === 'Tunai' ? nominalDibayar - totalKeranjang : 0;
+
+      const prosesPembayaran = () => {
+        if (keranjang.length === 0) {
+          tampilkanPesan('Keranjang pesanan masih kosong.', 'gagal');
+          return;
+        }
+        if (metodeBayar === 'Tunai' && nominalDibayar < totalKeranjang) {
+          tampilkanPesan('Uang yang diterima kurang dari total pesanan.', 'gagal');
+          return;
+        }
+
+        const nomorTrx = `TRX-20261120-${String(data.transaksi.length + 1).padStart(3, '0')}`;
+        const sekarang = new Date().toLocaleString('id-ID', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+
+        const itemDenganHpp = keranjang.map((item) => ({
+          id: item.id,
+          nama: item.nama,
+          qty: item.qty,
+          harga: item.harga,
+          hpp: Math.round(hitungHppProduk(item.id)),
+        }));
+
+        const totalHppTrx = itemDenganHpp.reduce((s, i) => s + i.hpp * i.qty, 0);
+
+        const transaksiBaru = {
+          id: nomorTrx,
+          waktu: sekarang,
+          tanggal: '2026-11-20',
+          items: itemDenganHpp,
+          total: totalKeranjang,
+          totalHpp: totalHppTrx,
+          metode: metodeBayar,
+          dibayar: nominalDibayar,
+          kembalian: kembalian > 0 ? kembalian : 0,
+          status: 'Selesai',
+          catatan: '',
+        };
+
+        // Potong stok bahan baku otomatis sesuai resep
+        const bahanTerbaru = [...data.bahanBaku];
+        const logBaru = [];
+
+        keranjang.forEach((item) => {
+          const resepItem = data.resep[item.id] || [];
+          resepItem.forEach((r) => {
+            const idx = bahanTerbaru.findIndex((b) => b.id === r.bahanId);
+            if (idx !== -1) {
+              const pengurangan = r.jumlah * item.qty;
+              bahanTerbaru[idx] = {
+                ...bahanTerbaru[idx],
+                stok: Math.max(0, bahanTerbaru[idx].stok - pengurangan),
+              };
+              logBaru.push({
+                id: `LOG-${Date.now()}-${idx}`,
+                waktu: sekarang,
+                bahan: bahanTerbaru[idx].nama,
+                tipe: 'Penjualan POS',
+                perubahan: `-${pengurangan} ${bahanTerbaru[idx].satuan}`,
+                keterangan: `Transaksi ${nomorTrx}`,
+              });
+            }
+          });
+        });
+
+        setData((prev) => ({
+          ...prev,
+          transaksi: [transaksiBaru, ...prev.transaksi],
+          bahanBaku: bahanTerbaru,
+          riwayatStok: [...logBaru, ...prev.riwayatStok],
+        }));
+
+        setStrukAktif(transaksiBaru);
+        setKeranjang([]);
+        setUangDiterima('');
+        tampilkanPesan(`Pembayaran ${nomorTrx} berhasil diproses!`);
+      };
+
+      // Ekspor CSV / Excel Laporan Keuangan
+      const eksporLaporanCSV = () => {
+        const baris = [
+          ['Laporan Keuangan - BUBUR AYAM POS'],
+          ['Periode', periodeDashboard],
+          [''],
+          ['Keterangan', 'Nilai (Rp)'],
+          ['Total Omzet', ringkasanKeuangan.totalOmzet],
+          ['Total HPP', ringkasanKeuangan.totalHpp],
+          ['Laba Kotor', ringkasanKeuangan.labaKotor],
+          ['Total Biaya Operasional', ringkasanKeuangan.totalBiayaOperasional],
+          ['Laba Bersih', ringkasanKeuangan.labaBersih],
+          ['Margin Keuntungan (%)', `${ringkasanKeuangan.marginKeuntungan}%`],
+        ];
+        const csvContent = 'data:text/csv;charset=utf-8,' + baris.map((e) => e.join(',')).join('\n');
+        const link = document.createElement('a');
+        link.setAttribute('href', encodeURI(csvContent));
+        link.setAttribute('download', `Laporan_Keuangan_Bubur_Ayam_POS.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        tampilkanPesan('Laporan Excel (CSV) berhasil diunduh.');
+      };
+
+      const navigasiMenu = [
+        {
+          grup: 'DASHBOARD',
+          items: [{ id: 'ringkasan', label: 'Ringkasan Bisnis', ikon: 'layout-dashboard' }],
+        },
+        {
+          grup: 'TRANSAKSI',
+          items: [
+            { id: 'kasir', label: 'Kasir', ikon: 'calculator' },
+            { id: 'riwayat', label: 'Riwayat Transaksi', ikon: 'receipt-text' },
+          ],
+        },
+        {
+          grup: 'OPERASIONAL',
+          items: [
+            { id: 'produk', label: 'Produk dan Menu', ikon: 'utensils' },
+            { id: 'persediaan', label: 'Persediaan Bahan Baku', ikon: 'package' },
+            { id: 'resep', label: 'Resep dan HPP', ikon: 'chef-hat' },
+            { id: 'pengeluaran', label: 'Pengeluaran', ikon: 'wallet' },
+          ],
+        },
+        {
+          grup: 'ANALISIS BISNIS',
+          items: [
+            { id: 'laporan', label: 'Laporan Keuangan', ikon: 'bar-chart-3' },
+            { id: 'kalender', label: 'Kalender Bisnis', ikon: 'calendar-days' },
+          ],
+        },
+        {
+          grup: 'PENGATURAN',
+          items: [{ id: 'pengaturan', label: 'Pengaturan Usaha', ikon: 'settings' }],
+        },
+      ];
+
+      const bahanHampirHabis = data.bahanBaku.filter((b) => b.stok <= b.minimum);
+
+      return (
+        <div className="min-h-screen flex bg-[#F8F7F4] text-[#30251F]">
+          {/* Notifikasi Toast */}
+          {notifikasiToast && (
+            <div
+              className={`fixed bottom-5 right-5 z-50 px-4 py-3 rounded-xl shadow-lg border flex items-center gap-2.5 text-sm font-medium transition-all ${
+                notifikasiToast.tipe === 'gagal'
+                  ? 'bg-[#C65E58] text-white border-[#a84944]'
+                  : 'bg-[#30251F] text-white border-[#554034]'
+              }`}
+            >
+              <Icon name={notifikasiToast.tipe === 'gagal' ? 'alert-circle' : 'check-circle-2'} size={18} />
+              <span>{notifikasiToast.teks}</span>
+            </div>
+          )}
+
+          {/* Sidebar Desktop */}
+          <aside
+            className={`hidden lg:flex flex-col bg-white border-r border-[#D7C3A5]/40 transition-all duration-300 shrink-0 ${
+              sidebarCiut ? 'w-20' : 'w-68'
+            }`}
+            style={{ width: sidebarCiut ? '80px' : '272px' }}
+          >
+            <div className="h-18 px-5 py-4 border-b border-[#F2EFE9] flex items-center justify-between">
+              <div className="flex items-center gap-3 overflow-hidden">
+                <div className="w-10 h-10 rounded-xl bg-[#30251F] text-[#D7C3A5] flex items-center justify-center font-bold text-lg shrink-0">
+                  🥣
+                </div>
+                {!sidebarCiut && (
+                  <div className="truncate">
+                    <div className="font-display font-bold text-sm tracking-tight text-[#30251F]">
+                      BUBUR AYAM POS
+                    </div>
+                    <div className="text-[11px] text-[#554034]/75">Sistem Manajemen Bisnis</div>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => setSidebarCiut(!sidebarCiut)}
+                className="p-1.5 rounded-lg hover:bg-[#F2EFE9] text-[#554034]"
+                title="Ubah ukuran menu samping"
+              >
+                <Icon name={sidebarCiut ? 'panel-left-open' : 'panel-left-close'} size={16} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
+              {navigasiMenu.map((kelompok) => (
+                <div key={kelompok.grup}>
+                  {!sidebarCiut && (
+                    <div className="px-3 mb-1.5 text-[10px] font-bold tracking-wider text-[#554034]/55">
+                      {kelompok.grup}
+                    </div>
+                  )}
+                  <div className="space-y-1">
+                    {kelompok.items.map((item) => {
+                      const aktif = menuAktif === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => setMenuAktif(item.id)}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                            aktif
+                              ? 'bg-[#30251F] text-white shadow-sm'
+                              : 'text-[#554034] hover:bg-[#F2EFE9]'
+                          }`}
+                        >
+                          <Icon name={item.ikon} size={18} />
+                          {!sidebarCiut && <span className="truncate">{item.label}</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-3 border-t border-[#F2EFE9] space-y-2">
+              {!sidebarCiut && (
+                <div className="px-3 py-2 rounded-xl bg-[#F2EFE9] text-[11px] text-[#554034] flex items-center justify-between">
+                  <span className="font-semibold">DATA DEMO AKTIF</span>
+                  <span className="w-2 h-2 rounded-full bg-[#43836A]"></span>
+                </div>
+              )}
+              <button
+                onClick={resetDataDemo}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-[#D7C3A5] text-xs font-medium text-[#554034] hover:bg-[#F2EFE9]"
+              >
+                <Icon name="rotate-ccw" size={14} />
+                {!sidebarCiut && <span>Reset Data Demo</span>}
+              </button>
+            </div>
+          </aside>
+
+          {/* Konten Utama */}
+          <div className="flex-1 flex flex-col min-w-0">
+            {/* Bilah Navigasi Atas */}
+            <header className="h-16 bg-white/90 backdrop-blur border-b border-[#D7C3A5]/40 px-4 lg:px-8 flex items-center justify-between gap-4 sticky top-0 z-30">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setSidebarMobile(!sidebarMobile)}
+                  className="lg:hidden p-2 rounded-xl bg-[#F2EFE9] text-[#30251F]"
+                >
+                  <Icon name="menu" size={20} />
+                </button>
+                <div>
+                  <span className="text-xs text-[#554034]/60">BUBUR AYAM POS / </span>
+                  <span className="text-sm font-semibold capitalize text-[#30251F]">
+                    {navigasiMenu.flatMap((g) => g.items).find((i) => i.id === menuAktif)?.label}
+                  </span>
+                </div>
+              </div>
+
+              <div className="hidden md:flex items-center bg-[#F8F7F4] border border-[#D7C3A5]/50 rounded-xl px-3 py-1.5 w-72">
+                <Icon name="search" size={15} className="text-[#554034]/60 mr-2" />
+                <input
+                  type="text"
+                  value={pencarianGlobal}
+                  onChange={(e) => setPencarianGlobal(e.target.value)}
+                  placeholder="Cari menu, transaksi, bahan..."
+                  className="bg-transparent text-xs w-full focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="hidden sm:block text-right">
+                  <div className="text-xs font-semibold text-[#30251F]">{data.profilUsaha.nama}</div>
+                  <div className="text-[11px] text-[#554034]/70">Jumat, 20 Nov 2026 • WIB</div>
+                </div>
+                <div className="w-9 h-9 rounded-full bg-[#BF7955] text-white flex items-center justify-center font-bold text-xs">
+                  OW
+                </div>
+              </div>
+            </header>
+
+            {/* Drawer Navigasi Mobile */}
+            {sidebarMobile && (
+              <div className="lg:hidden fixed inset-0 z-40 bg-black/40" onClick={() => setSidebarMobile(false)}>
+                <div className="w-64 h-full bg-white p-4 space-y-4 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                  <div className="font-display font-bold text-base text-[#30251F] pb-3 border-b">
+                    🥣 BUBUR AYAM POS
+                  </div>
+                  {navigasiMenu.map((k) => (
+                    <div key={k.grup} className="space-y-1">
+                      <div className="text-[10px] font-bold text-[#554034]/60 px-2">{k.grup}</div>
+                      {k.items.map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            setMenuAktif(item.id);
+                            setSidebarMobile(false);
+                          }}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm ${
+                            menuAktif === item.id ? 'bg-[#30251F] text-white' : 'text-[#554034]'
+                          }`}
+                        >
+                          <Icon name={item.ikon} size={16} />
+                          <span>{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Area Isi Halaman */}
+            <main className="flex-1 p-4 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
+              {/* 1. DASHBOARD UTAMA */}
+              {menuAktif === 'ringkasan' && (
+                <>
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h1 className="text-2xl font-bold text-[#30251F]">Selamat datang kembali!</h1>
+                      <p className="text-sm text-[#554034]/80">Berikut ringkasan kondisi bisnis Anda.</p>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 bg-white p-1.5 rounded-xl border border-[#D7C3A5]/40">
+                      {['Hari ini', 'Minggu ini', 'Bulan ini', 'Tahun ini'].map((p) => (
+                        <button
+                          key={p}
+                          onClick={() => setPeriodeDashboard(p)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                            periodeDashboard === p
+                              ? 'bg-[#30251F] text-white'
+                              : 'text-[#554034] hover:bg-[#F2EFE9]'
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 6 Kartu Informasi Utama */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[
+                      { label: 'Total Omzet', nilai: formatRupiah(ringkasanKeuangan.totalOmzet), tren: '+14,2% dibanding kemarin', positif: true },
+                      { label: 'Total Keuntungan Bersih', nilai: formatRupiah(ringkasanKeuangan.labaBersih), tren: `Margin ${ringkasanKeuangan.marginKeuntungan}%`, positif: ringkasanKeuangan.labaBersih >= 0 },
+                      { label: 'Keuntungan Kotor', nilai: formatRupiah(ringkasanKeuangan.labaKotor), tren: 'Setelah dikurangi HPP', positif: true },
+                      { label: 'Jumlah Transaksi', nilai: `${ringkasanKeuangan.jumlahTransaksi} Transaksi`, tren: '+3 pesanan baru', positif: true },
+                      { label: 'Jumlah Porsi Terjual', nilai: `${ringkasanKeuangan.jumlahPorsi} Porsi`, tren: 'Bubur & topping aktif', positif: true },
+                      { label: 'Rata-rata Nilai Transaksi', nilai: formatRupiah(ringkasanKeuangan.rataRataTransaksi), tren: 'Per struk pelanggan', positif: true },
+                    ].map((kartu, idx) => (
+                      <div key={idx} className="bg-white p-5 rounded-2xl border border-[#D7C3A5]/40 shadow-sm space-y-2">
+                        <div className="text-xs font-medium text-[#554034]/75">{kartu.label}</div>
+                        <div className="text-2xl font-bold tabular-nums text-[#30251F]">{kartu.nilai}</div>
+                        <div className={`text-xs font-medium flex items-center gap-1 ${kartu.positif ? 'text-[#43836A]' : 'text-[#C65E58]'}`}>
+                          <Icon name={kartu.positif ? 'trending-up' : 'trending-down'} size={14} />
+                          <span>{kartu.tren}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Informasi Tambahan Dashboard */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="bg-white p-5 rounded-2xl border border-[#D7C3A5]/40 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h2 className="font-bold text-base text-[#30251F]">Transaksi Terbaru</h2>
+                        <button onClick={() => setMenuAktif('riwayat')} className="text-xs font-semibold text-[#BF7955] hover:underline">
+                          Lihat Semua
+                        </button>
+                      </div>
+                      <div className="divide-y divide-[#F2EFE9]">
+                        {data.transaksi.slice(0, 5).map((trx) => (
+                          <div key={trx.id} className="py-3 flex items-center justify-between text-sm">
+                            <div>
+                              <div className="font-semibold text-[#30251F]">{trx.id}</div>
+                              <div className="text-xs text-[#554034]/70">{trx.waktu} • {trx.metode}</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-bold tabular-nums">{formatRupiah(trx.total)}</div>
+                              <span className={`text-[11px] px-2 py-0.5 rounded-full ${trx.status === 'Selesai' ? 'bg-[#43836A]/15 text-[#43836A]' : 'bg-[#C65E58]/15 text-[#C65E58]'}`}>
+                                {trx.status}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-5 rounded-2xl border border-[#D7C3A5]/40 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h2 className="font-bold text-base text-[#30251F]">Peringatan Bahan Baku Hampir Habis</h2>
+                        <button onClick={() => setMenuAktif('persediaan')} className="text-xs font-semibold text-[#BF7955] hover:underline">
+                          Kelola Stok
+                        </button>
+                      </div>
+                      {bahanHampirHabis.length === 0 ? (
+                        <div className="p-6 text-center text-sm text-[#43836A] bg-[#43836A]/10 rounded-xl">
+                          Seluruh stok bahan baku dalam kondisi aman.
+                        </div>
+                      ) : (
+                        <div className="space-y-2.5">
+                          {bahanHampirHabis.map((b) => (
+                            <div key={b.id} className="p-3 rounded-xl bg-[#C65E58]/10 border border-[#C65E58]/30 flex items-center justify-between">
+                              <div>
+                                <div className="font-semibold text-sm text-[#30251F]">{b.nama}</div>
+                                <div className="text-xs text-[#554034]">Batas minimum: {b.minimum} {b.satuan}</div>
+                              </div>
+                              <div className="text-sm font-bold text-[#C65E58] tabular-nums">
+                                Sisa {b.stok} {b.satuan}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* 2. HALAMAN KASIR */}
+              {menuAktif === 'kasir' && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                  {/* Bagian Kiri: Daftar Produk */}
+                  <div className="lg:col-span-7 space-y-4">
+                    <div className="bg-white p-4 rounded-2xl border border-[#D7C3A5]/40 flex flex-col sm:flex-row gap-3">
+                      <div className="flex-1 flex items-center bg-[#F8F7F4] px-3 py-2 rounded-xl border border-[#D7C3A5]/50">
+                        <Icon name="search" size={16} className="text-[#554034]/60 mr-2" />
+                        <input
+                          type="text"
+                          value={cariProdukKasir}
+                          onChange={(e) => setCariProdukKasir(e.target.value)}
+                          placeholder="Cari nama bubur atau topping..."
+                          className="bg-transparent text-sm w-full focus:outline-none"
+                        />
+                      </div>
+                      <div className="flex gap-1.5 overflow-x-auto">
+                        {['Semua', 'Menu Utama', 'Topping & Sate', 'Minuman'].map((kat) => (
+                          <button
+                            key={kat}
+                            onClick={() => setKategoriKasir(kat)}
+                            className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap ${
+                              kategoriKasir === kat ? 'bg-[#30251F] text-white' : 'bg-[#F2EFE9] text-[#554034]'
+                            }`}
+                          >
+                            {kat}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+                      {data.produk
+                        .filter((p) => p.aktif)
+                        .filter((p) => kategoriKasir === 'Semua' || p.kategori === kategoriKasir)
+                        .filter((p) => p.nama.toLowerCase().includes(cariProdukKasir.toLowerCase()))
+                        .map((produk) => {
+                          const itemDiKeranjang = keranjang.find((k) => k.id === produk.id);
+                          const sisaPorsi = cekKetersediaanPorsi(produk.id);
+                          const habis = sisaPorsi <= 0;
+
+                          return (
+                            <div
+                              key={produk.id}
+                              className={`bg-white p-4 rounded-2xl border transition flex flex-col justify-between ${
+                                habis
+                                  ? 'opacity-55 border-gray-200'
+                                  : 'border-[#D7C3A5]/40 hover:border-[#BF7955] shadow-sm'
+                              }`}
+                            >
+                              <div>
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-3xl">{produk.ikon}</span>
+                                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${habis ? 'bg-[#C65E58]/15 text-[#C65E58]' : 'bg-[#F2EFE9] text-[#554034]'}`}>
+                                    {habis ? 'Stok Habis' : `Sisa ±${sisaPorsi}`}
+                                  </span>
+                                </div>
+                                <div className="font-bold text-sm text-[#30251F]">{produk.nama}</div>
+                                <div className="text-xs text-[#554034]/70 mb-3">{produk.kategori}</div>
+                              </div>
+
+                              <div className="space-y-2.5">
+                                <div className="font-bold text-base text-[#BF7955] tabular-nums">
+                                  {formatRupiah(produk.harga)}
+                                </div>
+                                {itemDiKeranjang ? (
+                                  <div className="flex items-center justify-between bg-[#F2EFE9] rounded-xl p-1">
+                                    <button
+                                      onClick={() => ubahQtyKeranjang(produk.id, -1)}
+                                      className="w-7 h-7 rounded-lg bg-white text-[#30251F] font-bold flex items-center justify-center shadow-sm"
+                                    >
+                                      -
+                                    </button>
+                                    <span className="font-bold text-sm tabular-nums">{itemDiKeranjang.qty}</span>
+                                    <button
+                                      onClick={() => ubahQtyKeranjang(produk.id, 1)}
+                                      className="w-7 h-7 rounded-lg bg-[#30251F] text-white font-bold flex items-center justify-center"
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    disabled={habis}
+                                    onClick={() => tambahKeKeranjang(produk)}
+                                    className="w-full py-2 rounded-xl bg-[#30251F] hover:bg-[#554034] disabled:bg-gray-300 text-white text-xs font-semibold transition"
+                                  >
+                                    + Tambah
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+
+                  {/* Bagian Kanan: Ringkasan Pesanan */}
+                  <div className="lg:col-span-5 bg-white p-5 rounded-2xl border border-[#D7C3A5]/50 shadow-sm space-y-4 sticky top-20">
+                    <div className="flex items-center justify-between border-b border-[#F2EFE9] pb-3">
+                      <div>
+                        <h2 className="font-bold text-base text-[#30251F]">Ringkasan Pesanan</h2>
+                        <div className="text-xs text-[#554034]/70">
+                          No: TRX-20261120-{String(data.transaksi.length + 1).padStart(3, '0')}
+                        </div>
+                      </div>
+                      {keranjang.length > 0 && (
+                        <button onClick={() => setKeranjang([])} className="text-xs text-[#C65E58] font-medium hover:underline">
+                          Kosongkan
+                        </button>
+                      )}
+                    </div>
+
+                    {keranjang.length === 0 ? (
+                      <div className="py-10 text-center text-sm text-[#554034]/60">
+                        Belum ada produk dipilih. Klik menu di sebelah kiri untuk memulai transaksi.
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+                        {keranjang.map((item) => (
+                          <div key={item.id} className="flex items-center justify-between text-sm bg-[#F8F7F4] p-2.5 rounded-xl">
+                            <div>
+                              <div className="font-semibold text-[#30251F]">{item.nama}</div>
+                              <div className="text-xs text-[#554034]/70 tabular-nums">
+                                {formatRupiah(item.harga)} x {item.qty}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold tabular-nums">{formatRupiah(item.harga * item.qty)}</span>
+                              <button
+                                onClick={() => ubahQtyKeranjang(item.id, -1)}
+                                className="w-6 h-6 rounded bg-white border text-xs font-bold"
+                              >
+                                -
+                              </button>
+                              <button
+                                onClick={() => ubahQtyKeranjang(item.id, 1)}
+                                className="w-6 h-6 rounded bg-[#30251F] text-white text-xs font-bold"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="border-t border-[#F2EFE9] pt-3 space-y-2 text-sm">
+                      <div className="flex justify-between text-[#554034]">
+                        <span>Subtotal</span>
+                        <span className="tabular-nums">{formatRupiah(totalKeranjang)}</span>
+                      </div>
+                      <div className="flex justify-between text-lg font-bold text-[#30251F]">
+                        <span>Total Pesanan</span>
+                        <span className="tabular-nums text-[#BF7955]">{formatRupiah(totalKeranjang)}</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-[#554034]">Metode Pembayaran</label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {['Tunai', 'QRIS', 'Transfer', 'Lainnya'].map((m) => (
+                          <button
+                            key={m}
+                            onClick={() => setMetodeBayar(m)}
+                            className={`py-2 rounded-xl text-xs font-semibold border transition ${
+                              metodeBayar === m
+                                ? 'bg-[#30251F] text-white border-[#30251F]'
+                                : 'bg-[#F8F7F4] text-[#554034] border-[#D7C3A5]/50'
+                            }`}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {metodeBayar === 'Tunai' && (
+                      <div className="space-y-2 bg-[#F8F7F4] p-3 rounded-xl">
+                        <label className="text-xs font-semibold text-[#554034]">Uang yang Diterima (Rp)</label>
+                        <input
+                          type="number"
+                          value={uangDiterima}
+                          onChange={(e) => setUangDiterima(e.target.value)}
+                          placeholder="Masukkan nominal uang..."
+                          className="w-full px-3 py-2 rounded-lg bg-white border border-[#D7C3A5] text-sm font-bold tabular-nums"
+                        />
+                        <div className="flex gap-1.5 flex-wrap">
+                          {[15000, 20000, 50000, 100000].map((nom) => (
+                            <button
+                              key={nom}
+                              onClick={() => setUangDiterima(String(nom))}
+                              className="px-2.5 py-1 rounded-lg bg-white border border-[#D7C3A5]/60 text-xs font-medium hover:bg-[#F2EFE9]"
+                            >
+                              {formatRupiah(nom)}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex justify-between pt-1 text-sm font-bold">
+                          <span>Uang Kembalian</span>
+                          <span className={kembalian < 0 ? 'text-[#C65E58]' : 'text-[#43836A]'}>
+                            {formatRupiah(Math.max(0, kembalian))}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-2.5 pt-2">
+                      <button
+                        onClick={prosesPembayaran}
+                        className="col-span-2 py-3 rounded-xl bg-[#43836A] hover:bg-[#356b56] text-white font-bold text-sm shadow-sm transition"
+                      >
+                        Proses Pembayaran
+                      </button>
+                      {strukAktif && (
+                        <button
+                          onClick={() => window.print()}
+                          className="col-span-2 py-2.5 rounded-xl border border-[#30251F] text-[#30251F] font-semibold text-xs flex items-center justify-center gap-2 hover:bg-[#F2EFE9]"
+                        >
+                          <Icon name="printer" size={15} />
+                          <span>Cetak Struk Terakhir ({strukAktif.id})</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 3. RIWAYAT TRANSAKSI */}
+              {menuAktif === 'riwayat' && (
+                <div className="bg-white p-5 rounded-2xl border border-[#D7C3A5]/40 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <h2 className="text-lg font-bold">Riwayat Transaksi</h2>
+                    <input
+                      type="text"
+                      value={filterRiwayat}
+                      onChange={(e) => setFilterRiwayat(e.target.value)}
+                      placeholder="Cari nomor transaksi..."
+                      className="px-3 py-2 rounded-xl bg-[#F8F7F4] border border-[#D7C3A5]/60 text-xs w-full sm:w-64"
+                    />
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-[#F2EFE9] text-[#554034] text-xs">
+                        <tr>
+                          <th className="p-3 rounded-l-xl">No. Transaksi</th>
+                          <th className="p-3">Tanggal & Waktu</th>
+                          <th className="p-3">Daftar Produk</th>
+                          <th className="p-3">Total</th>
+                          <th className="p-3">Metode</th>
+                          <th className="p-3">Status</th>
+                          <th className="p-3 rounded-r-xl">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#F2EFE9]">
+                        {data.transaksi
+                          .filter((t) => t.id.toLowerCase().includes(filterRiwayat.toLowerCase()))
+                          .map((trx) => (
+                            <tr key={trx.id}>
+                              <td className="p-3 font-semibold">{trx.id}</td>
+                              <td className="p-3 text-xs text-[#554034]">{trx.waktu}</td>
+                              <td className="p-3 text-xs">
+                                {trx.items.map((i) => `${i.nama} (${i.qty})`).join(', ')}
+                              </td>
+                              <td className="p-3 font-bold tabular-nums">{formatRupiah(trx.total)}</td>
+                              <td className="p-3 text-xs">{trx.metode}</td>
+                              <td className="p-3">
+                                <span
+                                  className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                                    trx.status === 'Selesai'
+                                      ? 'bg-[#43836A]/15 text-[#43836A]'
+                                      : 'bg-[#C65E58]/15 text-[#C65E58]'
+                                  }`}
+                                >
+                                  {trx.status}
+                                </span>
+                                {trx.catatan && <div className="text-[11px] text-[#C65E58] mt-1">Alasan: {trx.catatan}</div>}
+                              </td>
+                              <td className="p-3 flex gap-2">
+                                <button
+                                  onClick={() => setStrukAktif(trx)}
+                                  className="px-2.5 py-1 rounded-lg bg-[#F2EFE9] text-xs font-medium hover:bg-[#D7C3A5]/40"
+                                >
+                                  Struk
+                                </button>
+                                {trx.status === 'Selesai' && (
+                                  <button
+                                    onClick={() => setModalBatal(trx.id)}
+                                    className="px-2.5 py-1 rounded-lg bg-[#C65E58]/15 text-[#C65E58] text-xs font-medium"
+                                  >
+                                    Batalkan
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* 4. PRODUK DAN MENU */}
+              {menuAktif === 'produk' && (
+                <div className="bg-white p-5 rounded-2xl border border-[#D7C3A5]/40 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-bold">Pengelolaan Produk dan Menu</h2>
+                    <button
+                      onClick={() =>
+                        setModalProduk({
+                          id: `PRD-${Date.now()}`,
+                          kode: `MNU-${data.produk.length + 1}`,
+                          nama: '',
+                          kategori: 'Menu Utama',
+                          harga: 10000,
+                          aktif: true,
+                          ikon: '🥣',
+                        })
+                      }
+                      className="px-4 py-2 rounded-xl bg-[#30251F] text-white text-xs font-semibold"
+                    >
+                      + Tambah Produk
+                    </button>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-[#F2EFE9] text-xs text-[#554034]">
+                        <tr>
+                          <th className="p-3 rounded-l-xl">Kode</th>
+                          <th className="p-3">Nama Produk</th>
+                          <th className="p-3">Kategori</th>
+                          <th className="p-3">Harga Jual</th>
+                          <th className="p-3">Estimasi HPP</th>
+                          <th className="p-3">Status</th>
+                          <th className="p-3 rounded-r-xl">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#F2EFE9]">
+                        {data.produk.map((p) => (
+                          <tr key={p.id}>
+                            <td className="p-3 text-xs font-mono">{p.kode}</td>
+                            <td className="p-3 font-semibold">{p.ikon} {p.nama}</td>
+                            <td className="p-3 text-xs">{p.kategori}</td>
+                            <td className="p-3 font-bold tabular-nums">{formatRupiah(p.harga)}</td>
+                            <td className="p-3 text-xs tabular-nums text-[#554034]">{formatRupiah(hitungHppProduk(p.id))}</td>
+                            <td className="p-3">
+                              <button
+                                onClick={() =>
+                                  setData((prev) => ({
+                                    ...prev,
+                                    produk: prev.produk.map((item) =>
+                                      item.id === p.id ? { ...item, aktif: !item.aktif } : item
+                                    ),
+                                  }))
+                                }
+                                className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                                  p.aktif ? 'bg-[#43836A]/15 text-[#43836A]' : 'bg-gray-200 text-gray-600'
+                                }`}
+                              >
+                                {p.aktif ? 'Aktif' : 'Nonaktif'}
+                              </button>
+                            </td>
+                            <td className="p-3 flex gap-2">
+                              <button
+                                onClick={() => setModalProduk(p)}
+                                className="px-2.5 py-1 rounded-lg bg-[#F2EFE9] text-xs font-medium"
+                              >
+                                Ubah
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* 5. PERSEDIAAN BAHAN BAKU */}
+              {menuAktif === 'persediaan' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="bg-white p-4 rounded-2xl border border-[#D7C3A5]/40">
+                      <div className="text-xs text-[#554034]">Jenis Bahan Baku</div>
+                      <div className="text-xl font-bold mt-1">{data.bahanBaku.length} Bahan</div>
+                    </div>
+                    <div className="bg-white p-4 rounded-2xl border border-[#D7C3A5]/40">
+                      <div className="text-xs text-[#554034]">Total Nilai Persediaan</div>
+                      <div className="text-xl font-bold mt-1 tabular-nums">
+                        {formatRupiah(
+                          data.bahanBaku.reduce((s, b) => s + (b.stok / b.jumlahBeli) * b.hargaBeli, 0)
+                        )}
+                      </div>
+                    </div>
+                    <div className="bg-white p-4 rounded-2xl border border-[#D7C3A5]/40">
+                      <div className="text-xs text-[#554034]">Peringatan Stok Minimum</div>
+                      <div className="text-xl font-bold mt-1 text-[#C65E58]">{bahanHampirHabis.length} Bahan</div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-5 rounded-2xl border border-[#D7C3A5]/40 overflow-x-auto">
+                    <h2 className="text-lg font-bold mb-4">Daftar Persediaan Bahan Baku</h2>
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-[#F2EFE9] text-xs text-[#554034]">
+                        <tr>
+                          <th className="p-3 rounded-l-xl">Nama Bahan</th>
+                          <th className="p-3">Kategori</th>
+                          <th className="p-3">Jumlah Stok</th>
+                          <th className="p-3">Minimum</th>
+                          <th className="p-3">Status</th>
+                          <th className="p-3 rounded-r-xl">Penyesuaian</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#F2EFE9]">
+                        {data.bahanBaku.map((b) => {
+                          const menipis = b.stok <= b.minimum;
+                          return (
+                            <tr key={b.id}>
+                              <td className="p-3 font-semibold">{b.nama}</td>
+                              <td className="p-3 text-xs">{b.kategori}</td>
+                              <td className="p-3 font-bold tabular-nums">{b.stok} {b.satuan}</td>
+                              <td className="p-3 text-xs tabular-nums">{b.minimum} {b.satuan}</td>
+                              <td className="p-3">
+                                <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${menipis ? 'bg-[#C65E58]/15 text-[#C65E58]' : 'bg-[#43836A]/15 text-[#43836A]'}`}>
+                                  {b.stok === 0 ? 'Habis' : menipis ? 'Hampir Habis' : 'Aman'}
+                                </span>
+                              </td>
+                              <td className="p-3">
+                                <button
+                                  onClick={() => setModalStok({ bahan: b, tipe: 'masuk', jumlah: '' })}
+                                  className="px-3 py-1.5 rounded-lg bg-[#30251F] text-white text-xs font-medium"
+                                >
+                                  + / - Stok
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* 6. RESEP DAN HPP */}
+              {menuAktif === 'resep' && (
+                <div className="bg-white p-5 rounded-2xl border border-[#D7C3A5]/40 space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h2 className="text-lg font-bold">Kalkulator Resep & Harga Pokok Penjualan (HPP)</h2>
+                      <p className="text-xs text-[#554034]/75">Perubahan harga bahan tidak mengubah riwayat HPP transaksi masa lalu.</p>
+                    </div>
+                    <select
+                      value={produkResepDipilih}
+                      onChange={(e) => setProdukResepDipilih(e.target.value)}
+                      className="px-3 py-2 rounded-xl border border-[#D7C3A5] bg-[#F8F7F4] text-sm font-semibold"
+                    >
+                      {data.produk.map((p) => (
+                        <option key={p.id} value={p.id}>{p.nama} ({formatRupiah(p.harga)})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {(() => {
+                    const produk = data.produk.find((p) => p.id === produkResepDipilih);
+                    const daftarResep = data.resep[produkResepDipilih] || [];
+                    const totalHpp = hitungHppProduk(produkResepDipilih);
+                    const labaKotor = (produk?.harga || 0) - totalHpp;
+                    const margin = produk?.harga ? ((labaKotor / produk.harga) * 100).toFixed(1) : 0;
+
+                    return (
+                      <>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-[#F8F7F4] p-4 rounded-xl">
+                          <div>
+                            <div className="text-xs text-[#554034]">Total HPP Per Porsi</div>
+                            <div className="text-xl font-bold text-[#30251F] tabular-nums">{formatRupiah(totalHpp)}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-[#554034]">Keuntungan Kotor</div>
+                            <div className="text-xl font-bold text-[#43836A] tabular-nums">{formatRupiah(labaKotor)}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-[#554034]">Persentase Margin</div>
+                            <div className="text-xl font-bold text-[#BF7955] tabular-nums">{margin}%</div>
+                          </div>
+                        </div>
+
+                        <table className="w-full text-left text-sm">
+                          <thead className="bg-[#F2EFE9] text-xs text-[#554034]">
+                            <tr>
+                              <th className="p-3 rounded-l-xl">Nama Bahan</th>
+                              <th className="p-3">Harga Pembelian</th>
+                              <th className="p-3">Takaran Per Porsi</th>
+                              <th className="p-3 rounded-r-xl">Biaya Bahan</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#F2EFE9]">
+                            {daftarResep.map((r, i) => {
+                              const b = data.bahanBaku.find((x) => x.id === r.bahanId);
+                              if (!b) return null;
+                              const biaya = (b.hargaBeli / b.jumlahBeli) * r.jumlah;
+                              return (
+                                <tr key={i}>
+                                  <td className="p-3 font-semibold">{b.nama}</td>
+                                  <td className="p-3 text-xs">{formatRupiah(b.hargaBeli)} / {b.jumlahBeli} {b.satuan}</td>
+                                  <td className="p-3 font-medium">{r.jumlah} {b.satuan}</td>
+                                  <td className="p-3 font-bold tabular-nums">{formatRupiah(biaya)}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* 7. PENGELUARAN */}
+              {menuAktif === 'pengeluaran' && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  <div className="lg:col-span-4 bg-white p-5 rounded-2xl border border-[#D7C3A5]/40 space-y-3 h-fit">
+                    <h2 className="font-bold text-base">Catat Pengeluaran Operasional</h2>
+                    <p className="text-xs text-[#554034]/70">Dipisahkan dari pembelian bahan baku agar laba tidak terhitung ganda.</p>
+                    <input
+                      type="date"
+                      value={formPengeluaran.tanggal}
+                      onChange={(e) => setFormPengeluaran({ ...formPengeluaran, tanggal: e.target.value })}
+                      className="w-full p-2.5 rounded-xl border border-[#D7C3A5]/60 text-xs"
+                    />
+                    <select
+                      value={formPengeluaran.kategori}
+                      onChange={(e) => setFormPengeluaran({ ...formPengeluaran, kategori: e.target.value })}
+                      className="w-full p-2.5 rounded-xl border border-[#D7C3A5]/60 text-xs"
+                    >
+                      {['Listrik', 'Air', 'Gas', 'Sewa', 'Gaji pegawai', 'Transportasi', 'Perawatan peralatan', 'Pengeluaran lainnya'].map((k) => (
+                        <option key={k} value={k}>{k}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Keterangan pengeluaran..."
+                      value={formPengeluaran.keterangan}
+                      onChange={(e) => setFormPengeluaran({ ...formPengeluaran, keterangan: e.target.value })}
+                      className="w-full p-2.5 rounded-xl border border-[#D7C3A5]/60 text-xs"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Nominal (Rp)"
+                      value={formPengeluaran.jumlah}
+                      onChange={(e) => setFormPengeluaran({ ...formPengeluaran, jumlah: e.target.value })}
+                      className="w-full p-2.5 rounded-xl border border-[#D7C3A5]/60 text-xs"
+                    />
+                    <button
+                      onClick={() => {
+                        if (!formPengeluaran.keterangan || !formPengeluaran.jumlah) {
+                          tampilkanPesan('Lengkapi keterangan dan jumlah pengeluaran.', 'gagal');
+                          return;
+                        }
+                        setData((prev) => ({
+                          ...prev,
+                          pengeluaran: [
+                            { id: `EXP-${Date.now()}`, ...formPengeluaran, jumlah: Number(formPengeluaran.jumlah) },
+                            ...prev.pengeluaran,
+                          ],
+                        }));
+                        setFormPengeluaran({ ...formPengeluaran, keterangan: '', jumlah: '' });
+                        tampilkanPesan('Pengeluaran berhasil dicatat.');
+                      }}
+                      className="w-full py-2.5 rounded-xl bg-[#30251F] text-white text-xs font-semibold"
+                    >
+                      Simpan Pengeluaran
+                    </button>
+                  </div>
+
+                  <div className="lg:col-span-8 bg-white p-5 rounded-2xl border border-[#D7C3A5]/40 overflow-x-auto">
+                    <h2 className="font-bold text-base mb-4">Daftar Pengeluaran Usaha</h2>
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-[#F2EFE9] text-xs text-[#554034]">
+                        <tr>
+                          <th className="p-3 rounded-l-xl">Tanggal</th>
+                          <th className="p-3">Kategori</th>
+                          <th className="p-3">Keterangan</th>
+                          <th className="p-3 rounded-r-xl">Jumlah</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#F2EFE9]">
+                        {data.pengeluaran.map((p) => (
+                          <tr key={p.id}>
+                            <td className="p-3 text-xs">{p.tanggal}</td>
+                            <td className="p-3 font-medium text-xs">{p.kategori}</td>
+                            <td className="p-3 text-xs">{p.keterangan}</td>
+                            <td className="p-3 font-bold tabular-nums text-[#C65E58]">{formatRupiah(p.jumlah)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* 8. LAPORAN KEUANGAN */}
+              {menuAktif === 'laporan' && (
+                <div className="bg-white p-6 rounded-2xl border border-[#D7C3A5]/40 space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h2 className="text-lg font-bold">Laporan Keuangan Laba Rugi</h2>
+                      <p className="text-xs text-[#554034]/75">Ringkasan kinerja finansial usaha secara menyeluruh.</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={eksporLaporanCSV}
+                        className="px-4 py-2 rounded-xl bg-[#43836A] text-white text-xs font-semibold flex items-center gap-2"
+                      >
+                        <Icon name="file-spreadsheet" size={15} />
+                        <span>Ekspor Excel (CSV)</span>
+                      </button>
+                      <button
+                        onClick={() => window.print()}
+                        className="px-4 py-2 rounded-xl bg-[#30251F] text-white text-xs font-semibold flex items-center gap-2"
+                      >
+                        <Icon name="printer" size={15} />
+                        <span>Cetak / PDF</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="divide-y divide-[#F2EFE9] border border-[#D7C3A5]/40 rounded-2xl overflow-hidden">
+                    {[
+                      { label: '1. Total Omzet Penjualan', nilai: formatRupiah(ringkasanKeuangan.totalOmzet), tebal: true },
+                      { label: '2. Total Harga Pokok Penjualan (HPP)', nilai: `(${formatRupiah(ringkasanKeuangan.totalHpp)})`, merah: true },
+                      { label: '3. Laba Kotor', nilai: formatRupiah(ringkasanKeuangan.labaKotor), tebal: true },
+                      { label: '4. Total Biaya Operasional', nilai: `(${formatRupiah(ringkasanKeuangan.totalBiayaOperasional)})`, merah: true },
+                      { label: '5. Laba Bersih Usaha', nilai: formatRupiah(ringkasanKeuangan.labaBersih), tebal: true, sorot: true },
+                      { label: '6. Persentase Margin Keuntungan', nilai: `${ringkasanKeuangan.marginKeuntungan}%`, tebal: true },
+                    ].map((baris, idx) => (
+                      <div
+                        key={idx}
+                        className={`p-4 flex justify-between items-center text-sm ${
+                          baris.sorot ? 'bg-[#F2EFE9] font-bold text-base' : 'bg-white'
+                        }`}
+                      >
+                        <span className={baris.tebal ? 'font-bold text-[#30251F]' : 'text-[#554034]'}>{baris.label}</span>
+                        <span className={`tabular-nums ${baris.merah ? 'text-[#C65E58]' : baris.tebal ? 'font-bold text-[#30251F]' : ''}`}>
+                          {baris.nilai}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 9. KALENDER BISNIS */}
+              {menuAktif === 'kalender' && (
+                <div className="bg-white p-6 rounded-2xl border border-[#D7C3A5]/40 space-y-4">
+                  <h2 className="text-lg font-bold">Kalender Bisnis — November 2026</h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2.5">
+                    {Array.from({ length: 30 }, (_, i) => i + 1).map((tgl) => {
+                      const tglStr = `2026-11-${String(tgl).padStart(2, '0')}`;
+                      const trxHari = data.transaksi.filter((t) => t.tanggal === tglStr && t.status === 'Selesai');
+                      const omzetHari = trxHari.reduce((s, t) => s + t.total, 0);
+                      return (
+                        <div
+                          key={tgl}
+                          className={`p-3 rounded-xl border min-h-24 flex flex-col justify-between ${
+                            tgl === 20 ? 'border-[#BF7955] bg-[#BF7955]/10' : 'border-[#F2EFE9] bg-[#F8F7F4]'
+                          }`}
+                        >
+                          <div className="font-bold text-xs text-[#30251F]">{tgl} Nov</div>
+                          {omzetHari > 0 ? (
+                            <div className="space-y-0.5">
+                              <div className="text-xs font-bold text-[#43836A] tabular-nums">{formatRupiah(omzetHari)}</div>
+                              <div className="text-[10px] text-[#554034]">{trxHari.length} transaksi</div>
+                            </div>
+                          ) : (
+                            <div className="text-[10px] text-[#554034]/40">Belum ada data</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 10. PENGATURAN USAHA */}
+              {menuAktif === 'pengaturan' && (
+                <div className="bg-white p-6 rounded-2xl border border-[#D7C3A5]/40 max-w-2xl space-y-4">
+                  <h2 className="text-lg font-bold">Pengaturan Profil Usaha & Struk</h2>
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <label className="block text-xs font-semibold mb-1">Nama Usaha</label>
+                      <input
+                        type="text"
+                        value={data.profilUsaha.nama}
+                        onChange={(e) =>
+                          setData({ ...data, profilUsaha: { ...data.profilUsaha, nama: e.target.value } })
+                        }
+                        className="w-full p-2.5 rounded-xl border border-[#D7C3A5]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold mb-1">Alamat Usaha</label>
+                      <input
+                        type="text"
+                        value={data.profilUsaha.alamat}
+                        onChange={(e) =>
+                          setData({ ...data, profilUsaha: { ...data.profilUsaha, alamat: e.target.value } })
+                        }
+                        className="w-full p-2.5 rounded-xl border border-[#D7C3A5]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold mb-1">Nomor Telepon</label>
+                      <input
+                        type="text"
+                        value={data.profilUsaha.telepon}
+                        onChange={(e) =>
+                          setData({ ...data, profilUsaha: { ...data.profilUsaha, telepon: e.target.value } })
+                        }
+                        className="w-full p-2.5 rounded-xl border border-[#D7C3A5]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold mb-1">Pesan Kaki Struk</label>
+                      <input
+                        type="text"
+                        value={data.profilUsaha.catatanStruk}
+                        onChange={(e) =>
+                          setData({ ...data, profilUsaha: { ...data.profilUsaha, catatanStruk: e.target.value } })
+                        }
+                        className="w-full p-2.5 rounded-xl border border-[#D7C3A5]"
+                      />
+                    </div>
+                    <button
+                      onClick={() => tampilkanPesan('Pengaturan usaha berhasil disimpan.')}
+                      className="px-5 py-2.5 rounded-xl bg-[#30251F] text-white text-xs font-semibold"
+                    >
+                      Simpan Perubahan
+                    </button>
+                  </div>
+                </div>
+              )}
+            </main>
+          </div>
+
+          {/* MODAL STRUK THERMAL 58MM / 80MM */}
+          {strukAktif && (
+            <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setStrukAktif(null)}>
+              <div className="bg-white rounded-2xl p-5 max-w-md w-full space-y-4" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between">
+                  <div className="flex gap-2">
+                    {['58mm', '80mm'].map((uk) => (
+                      <button
+                        key={uk}
+                        onClick={() => setLebarStruk(uk)}
+                        className={`px-3 py-1 rounded-lg text-xs font-semibold ${lebarStruk === uk ? 'bg-[#30251F] text-white' : 'bg-[#F2EFE9]'}`}
+                      >
+                        Ukuran {uk}
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={() => setStrukAktif(null)} className="text-xs text-[#554034]">Tutup</button>
+                </div>
+
+                <div
+                  id="area-cetak-struk"
+                  className={`mx-auto bg-white border border-dashed border-gray-400 p-4 font-mono text-xs text-black ${
+                    lebarStruk === '58mm' ? 'w-64' : 'w-80'
+                  }`}
+                >
+                  <div className="text-center border-b border-dashed border-gray-400 pb-2 mb-2">
+                    <div className="font-bold text-sm">{data.profilUsaha.nama}</div>
+                    <div>{data.profilUsaha.alamat}</div>
+                    <div>Telp: {data.profilUsaha.telepon}</div>
+                  </div>
+                  <div className="mb-2">
+                    <div>No: {strukAktif.id}</div>
+                    <div>Waktu: {strukAktif.waktu}</div>
+                    <div>Bayar: {strukAktif.metode}</div>
+                  </div>
+                  <div className="border-t border-b border-dashed border-gray-400 py-2 space-y-1">
+                    {strukAktif.items.map((item, idx) => (
+                      <div key={idx} className="flex justify-between">
+                        <span>{item.nama} x{item.qty}</span>
+                        <span>{formatRupiah(item.harga * item.qty)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="pt-2 space-y-1">
+                    <div className="flex justify-between font-bold">
+                      <span>TOTAL</span>
+                      <span>{formatRupiah(strukAktif.total)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>DIBAYAR</span>
+                      <span>{formatRupiah(strukAktif.dibayar)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>KEMBALIAN</span>
+                      <span>{formatRupiah(strukAktif.kembalian)}</span>
+                    </div>
+                  </div>
+                  <div className="text-center border-t border-dashed border-gray-400 mt-3 pt-2 text-[11px]">
+                    {data.profilUsaha.catatanStruk}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => window.print()}
+                  className="w-full py-2.5 rounded-xl bg-[#30251F] text-white font-semibold text-xs flex items-center justify-center gap-2"
+                >
+                  <Icon name="printer" size={16} />
+                  <span>Cetak Struk Sekarang</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* MODAL PEMBATALAN TRANSAKSI */}
+          {modalBatal && (
+            <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3">
+                <h3 className="font-bold text-base">Batalkan Transaksi {modalBatal}</h3>
+                <textarea
+                  rows="3"
+                  value={alasanBatal}
+                  onChange={(e) => setAlasanBatal(e.target.value)}
+                  placeholder="Tuliskan alasan pembatalan transaksi..."
+                  className="w-full p-2.5 rounded-xl border border-[#D7C3A5] text-xs"
+                />
+                <div className="flex justify-end gap-2">
+                  <button onClick={() => setModalBatal(null)} className="px-3 py-2 rounded-xl text-xs bg-[#F2EFE9]">Batal</button>
+                  <button
+                    onClick={() => {
+                      if (!alasanBatal.trim()) {
+                        tampilkanPesan('Alasan pembatalan wajib diisi.', 'gagal');
+                        return;
+                      }
+                      setData((prev) => ({
+                        ...prev,
+                        transaksi: prev.transaksi.map((t) =>
+                          t.id === modalBatal ? { ...t, status: 'Dibatalkan', catatan: alasanBatal } : t
+                        ),
+                      }));
+                      setModalBatal(null);
+                      setAlasanBatal('');
+                      tampilkanPesan('Transaksi telah dibatalkan.');
+                    }}
+                    className="px-3 py-2 rounded-xl text-xs bg-[#C65E58] text-white font-semibold"
+                  >
+                    Konfirmasi Pembatalan
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* MODAL PRODUK */}
+          {modalProduk && (
+            <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3">
+                <h3 className="font-bold text-base">Form Produk & Menu</h3>
+                <input
+                  type="text"
+                  placeholder="Nama Produk"
+                  value={modalProduk.nama}
+                  onChange={(e) => setModalProduk({ ...modalProduk, nama: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border text-xs"
+                />
+                <select
+                  value={modalProduk.kategori}
+                  onChange={(e) => setModalProduk({ ...modalProduk, kategori: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border text-xs"
+                >
+                  <option value="Menu Utama">Menu Utama</option>
+                  <option value="Topping & Sate">Topping & Sate</option>
+                  <option value="Minuman">Minuman</option>
+                </select>
+                <input
+                  type="number"
+                  placeholder="Harga Jual (Rp)"
+                  value={modalProduk.harga}
+                  onChange={(e) => setModalProduk({ ...modalProduk, harga: Number(e.target.value) })}
+                  className="w-full p-2.5 rounded-xl border text-xs"
+                />
+                <div className="flex justify-end gap-2">
+                  <button onClick={() => setModalProduk(null)} className="px-3 py-2 rounded-xl text-xs bg-[#F2EFE9]">Batal</button>
+                  <button
+                    onClick={() => {
+                      if (!modalProduk.nama) return;
+                      setData((prev) => {
+                        const ada = prev.produk.some((p) => p.id === modalProduk.id);
+                        return {
+                          ...prev,
+                          produk: ada
+                            ? prev.produk.map((p) => (p.id === modalProduk.id ? modalProduk : p))
+                            : [...prev.produk, modalProduk],
+                        };
+                      });
+                      setModalProduk(null);
+                      tampilkanPesan('Data produk berhasil disimpan.');
+                    }}
+                    className="px-3 py-2 rounded-xl text-xs bg-[#30251F] text-white font-semibold"
+                  >
+                    Simpan Produk
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* MODAL PENYESUAIAN STOK */}
+          {modalStok && (
+            <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3">
+                <h3 className="font-bold text-base">Penyesuaian Stok: {modalStok.bahan.nama}</h3>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setModalStok({ ...modalStok, tipe: 'masuk' })}
+                    className={`flex-1 py-2 rounded-xl text-xs font-semibold ${modalStok.tipe === 'masuk' ? 'bg-[#43836A] text-white' : 'bg-[#F2EFE9]'}`}
+                  >
+                    Stok Masuk (+)
+                  </button>
+                  <button
+                    onClick={() => setModalStok({ ...modalStok, tipe: 'keluar' })}
+                    className={`flex-1 py-2 rounded-xl text-xs font-semibold ${modalStok.tipe === 'keluar' ? 'bg-[#C65E58] text-white' : 'bg-[#F2EFE9]'}`}
+                  >
+                    Stok Keluar (-)
+                  </button>
+                </div>
+                <input
+                  type="number"
+                  placeholder={`Jumlah (${modalStok.bahan.satuan})`}
+                  value={modalStok.jumlah}
+                  onChange={(e) => setModalStok({ ...modalStok, jumlah: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border text-xs"
+                />
+                <div className="flex justify-end gap-2">
+                  <button onClick={() => setModalStok(null)} className="px-3 py-2 rounded-xl text-xs bg-[#F2EFE9]">Batal</button>
+                  <button
+                    onClick={() => {
+                      const jml = Number(modalStok.jumlah);
+                      if (!jml || jml <= 0) return;
+                      setData((prev) => ({
+                        ...prev,
+                        bahanBaku: prev.bahanBaku.map((b) =>
+                          b.id === modalStok.bahan.id
+                            ? {
+                                ...b,
+                                stok:
+                                  modalStok.tipe === 'masuk'
+                                    ? b.stok + jml
+                                    : Math.max(0, b.stok - jml),
+                              }
+                            : b
+                        ),
+                      }));
+                      setModalStok(null);
+                      tampilkanPesan('Stok bahan baku berhasil diperbarui.');
+                    }}
+                    className="px-3 py-2 rounded-xl text-xs bg-[#30251F] text-white font-semibold"
+                  >
+                    Simpan Stok
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
